@@ -1,0 +1,31 @@
+FROM ubuntu:20.04
+
+# Install Java and other dependencies
+RUN apt-get update && \
+    apt-get install -y openjdk-11-jdk-headless procps  curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set JAVA_HOME environment variable
+ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64
+ENV PATH $JAVA_HOME/bin:$PATH
+
+# Download and install Apache Spark with Kafka support
+ARG SPARK_VERSION=3.4.0
+ARG HADOOP_VERSION=3
+ARG KAFKA_VERSION=0-10  # Make sure this is compatible with your Kafka and Spark versions
+RUN curl -sL "https://archive.apache.org/dist/spark/spark-$SPARK_VERSION/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION.tgz" | tar -xz -C /opt/ && \
+    ln -s /opt/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION /opt/spark && \
+    /opt/spark/bin/spark-shell --packages org.apache.spark:spark-sql-kafka-0-10_2.12:$SPARK_VERSION
+
+
+# Set SPARK_HOME environment variable
+ENV SPARK_HOME /opt/spark
+ENV PATH $SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
+
+# Add a user to run Spark jobs
+RUN useradd -ms /bin/bash spark
+USER spark
+WORKDIR /home/spark
+
+# Expose the ports for master and worker
+EXPOSE 8080 7077 4040
